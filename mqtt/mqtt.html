@@ -42,6 +42,11 @@ $var page: mqtt_plugin
                 <td><input type="text" name="broker_port" value="${settings['broker_port']}"></td>
             </tr>
             <tr>
+                <td style='text-transform: none;'>$_('MQTT Keepalive'):</td>
+                <td><input type="text" name="broker_alive" value="${settings['broker_alive']}">
+                 60 seconds is usually a good vallue.</td>
+            </tr>
+            <tr>
               <td style='text-transform: none;'>$_('MQTT Publish up/down topic'):</td>
               <td><input type="text" name="publish_up_down" value="${settings['publish_up_down']}">
               Leave blank to not publish SIP status.</td>

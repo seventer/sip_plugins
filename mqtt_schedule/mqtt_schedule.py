@@ -2,7 +2,7 @@
 from __future__ import print_function
 """ SIP plugin uses mqtt plugin to receive run once program commands over MQTT
 """
-__author__ = "Daniel Casner <daniel@danielcasner.org>"
+__author__ = "Daniel Casner <daniel@danielcasner.org> Modifications by Gerard (astrogerard@gmail.com)"
 
 import web  # web.py framework
 import gv  # Get access to SIP's settings
@@ -13,6 +13,9 @@ from blinker import signal # To receive station notifications
 from helpers import schedule_stations
 import json  # for working with data file
 from plugins import mqtt
+
+
+_subscribed = False
 
 # Add new URLs to access classes in this plugin.
 urls.extend([
@@ -52,14 +55,14 @@ def on_message(client, msg):
     try:
         cmd = json.loads(msg.payload)
     except ValueError as e:
-        print("MQTT Schedule could not decode command: ", msg.payload, e)
+        print("MQTT-Schedule, could not decode command: ", msg.payload, e)
         return
     if type(cmd) is list:
         if len(cmd) < num_sta:
-            print("MQTT schedule, not enough stations specified, assuming first {} of {}".format(len(cmd), num_sta))
+            print("MQTT-Schedule, not enough stations specified, assuming first {} of {}".format(len(cmd), num_sta))
             rovals = cmd + ([0] * (num_sta - len(cmd)))
         elif len(cmd) > num_sta:
-            print("MQTT schedule, too many stations specified, truncating to {}".format(num_sta))
+            print("MQTT-Schedule, too many stations specified, truncating to {}".format(num_sta))
             rovals = cmd[0:num_sta]
         else:
             rovals = cmd
@@ -67,14 +70,14 @@ def on_message(client, msg):
         rovals = [0] * num_sta
         for k, v in cmd.items():
             if k not in gv.snames:
-                print("MQTT schedule, no station named:", k)
+                print("MQTT-Schedule, no station named:", k)
             else:
                 rovals[gv.snames.index(k)] = v
     else:
-        print("MQTT schedule unexpected command: ", msg.payload)
+        print("MQTT-Schedule, unexpected command: ", msg.payload)
         return
     if any(rovals):
-        print("MQTT schedule:", rovals)
+        print("MQTT-Schedule, schedule:", rovals)
         gv.rovals = rovals
         stations = [0] * num_brds
         gv.ps = []  # program schedule (for display)
@@ -94,8 +97,30 @@ def on_message(client, msg):
 
 def subscribe():
     "Subscribe to messages"
+    global _subscribed
+    
     topic = mqtt.get_settings().get('schedule_topic')
     if topic:
-        mqtt.subscribe(topic, on_message, 2)
+        if mqtt.is_connected():
+            print("MQTT-Schedule, registering on zone_topic ", topic)
+            _subscribed=mqtt.subscribe(topic, on_message, 2)
+        else:
+            print("MQTT-Schedule, unable to subscribe, client not connected")
+
+def notify_heartbeat(name, **kw):
+    global _subscribed
+    print("MQTT-Schedule, received hearbeat signal")
+    
+    if mqtt.is_connected()==False and _subscribed==True:
+        print("MQTT-Schedule, lost connection and subscription")
+        _subscribed=False
+   
+    if _subscribed==False:
+        print("MQTT-Schedule, not subscribed but attempting to....")
+        subscribe()
+            
+
+beat = signal('sip_heartbeat')
+beat.connect(notify_heartbeat)
 
 subscribe()
