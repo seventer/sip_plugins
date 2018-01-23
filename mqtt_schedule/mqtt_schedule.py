@@ -2,7 +2,7 @@
 from __future__ import print_function
 """ SIP plugin uses mqtt plugin to receive run once program commands over MQTT
 """
-__author__ = "Daniel Casner <daniel@danielcasner.org> Modifications by Gerard (astrogerard@gmail.com)"
+__author__ = "Daniel Casner <daniel@danielcasner.org> Modifications by Gerard (seventer@live.nl)"
 
 import web  # web.py framework
 import gv  # Get access to SIP's settings
